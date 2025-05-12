@@ -109,17 +109,25 @@ exports.removeSongFromPlaylist = async (req, res) => {
     const { playlistId, songId } = req.body;
     const userId = req.user.userId;
 
-
+    // Find the user
     const user = await User.findById(userId);
-    const playlist = user.playlists.find(p => p._id.toString() === playlistId);
-    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Find the playlist in the user's playlists array
+    const playlist = user.playlists.id(playlistId);
     if (!playlist) {
       return res.status(404).json({ message: 'Playlist not found or unauthorized' });
     }
 
+    // Remove the song from the playlist's songs array
     playlist.songs = playlist.songs.filter((song) => song._id.toString() !== songId);
-    await playlist.save();
-    res.status(200).json(playlist);
+
+    // Save the parent document (user)
+    await user.save();
+
+    res.status(200).json({ message: 'Song removed from playlist successfully', playlist });
   } catch (err) {
     console.error('Error removing song from playlist:', err);
     res.status(500).json({
