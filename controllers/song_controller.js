@@ -1,5 +1,7 @@
 const os = require('os'); // Import the os module
 const Song = require('../models/song.js');
+const admin = require('../middleware/firebase.js'); // Import Firebase Admin SDK
+
 
 class SongController {
   static async uploadSong(req, res) {
@@ -7,13 +9,11 @@ class SongController {
     const mp3File = req.files['file']?.[0];
     const thumbnailFile = req.files['thumbnail']?.[0];
 
-    // Get the local IP address dynamically
     const networkInterfaces = os.networkInterfaces();
     const ipAddress = Object.values(networkInterfaces)
       .flat()
       .find((iface) => iface.family === 'IPv4' && !iface.internal)?.address;
 
-    // Validate required fields
     if (!title || !artist || !album || !mp3File) {
       return res
         .status(400)
@@ -26,19 +26,48 @@ class SongController {
         artist,
         album,
         genre: genre || 'Unknown',
-        mp3Url: `http://${ipAddress}:4000/uploads/songs/${mp3File.filename}`, // Use dynamic IP
+        mp3Url: `http://${ipAddress}:4000/uploads/songs/${mp3File.filename}`,
         thumbnailUrl: thumbnailFile
-          ? `http://${ipAddress}:4000/uploads/thumbnails/${thumbnailFile.filename}` // Use dynamic IP
+          ? `http://${ipAddress}:4000/uploads/thumbnails/${thumbnailFile.filename}`
           : '',
       };
 
       const song = await Song.create(songData);
+
+      // Send push notification
+     const message = {
+  notification: {
+    title: 'New Song Uploaded!',
+    body: `${title} by ${artist} is now available.`,
+  },
+  topic: 'new_songs',
+  android: {
+    priority: 'high',
+  },
+  apns: {
+    headers: {
+      'apns-priority': '10',
+    },
+  }
+};
+
+try {
+  const response = await admin.messaging().send(message);
+  console.log("✅ Notification sent:", response);
+} catch (error) {
+  console.error("❌ Failed to send FCM notification:", error);
+}
+
+      await admin.messaging().send(message);
+      console.log('Notification sent successfully');
+
       res.status(201).json({ message: 'Song uploaded successfully', song });
     } catch (error) {
       console.error('Error uploading song:', error);
       res.status(500).json({ error: 'Failed to upload song' });
     }
   }
+
 
   static async getSongs(req, res) {
     try {

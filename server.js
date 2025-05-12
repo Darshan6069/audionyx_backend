@@ -7,6 +7,7 @@ const app = express();
 const port = process.env.PORT || 4000;
 const songRoutes = require('./routes/song_routes');
 const playlistRoutes = require('./routes/playlist_routes');
+const authRoutes = require("./routes/auth_routes");
 
 // Get the local IP address dynamically
 const networkInterfaces = os.networkInterfaces();
@@ -28,8 +29,6 @@ app.use('/uploads', express.static('uploads')); // Serve static files
 // Routes
 app.use('/api/songs', songRoutes);
 app.use('/api/playlists', playlistRoutes);
-
-const authRoutes = require("./routes/auth_routes");
 app.use("/api/auth", authRoutes);
 
 // Start the server with the dynamically fetched IP address
