@@ -6,9 +6,10 @@ const songSchema = new mongoose.Schema({
   title: { type: String, required: true },
   artist: { type: String, required: true },
   album: { type: String, default: '' },
-  genre: { type: String, default: '' },
+  genre: { type: String, default: 'Unknown' },
   createdAt: { type: Date, default: Date.now },
-  likes: { type: Number, default: 0 }, // Add a field to track likes
+  likes: { type: Number, default: 0 },
+  subtitleUrl: { type: String, default: '' }, // ✅ New: URL to .srt file
 });
 
 // Map _id to id in JSON output
