@@ -67,10 +67,16 @@ exports.getPlaylists = async (req, res) => {
   }
 };
 
+
 exports.addSongToPlaylist = async (req, res) => {
   try {
-    const { playlistId, songId } = req.body; // Get playlist ID and song ID from the request body
+    const { playlistId, songIds } = req.body; // Get playlist ID and list of song IDs from the request body
     const userId = req.user.userId; // Get user ID from the authenticated user
+
+    // Validate songIds
+    if (!Array.isArray(songIds) || songIds.length === 0) {
+      return res.status(400).json({ message: 'songIds must be a non-empty array' });
+    }
 
     // Find the user
     const user = await User.findById(userId);
@@ -84,21 +90,27 @@ exports.addSongToPlaylist = async (req, res) => {
       return res.status(404).json({ message: 'Playlist not found' });
     }
 
-    // Fetch the full song data from the Song model
-    const song = await Song.findById(songId);
-    if (!song) {
-      return res.status(404).json({ message: 'Song not found' });
+    // Fetch all songs by their IDs
+    const songs = await Song.find({ _id: { $in: songIds } });
+    if (!songs || songs.length === 0) {
+      return res.status(404).json({ message: 'No songs found for the provided IDs' });
+    }
+
+    // Check if all requested song IDs were found
+    if (songs.length !== songIds.length) {
+      return res.status(404).json({ message: 'Some songs were not found' });
     }
 
     // Add the full song data to the playlist's songs array
-    playlist.songs.push(song.toObject()); // Convert Mongoose document to plain object
+    const songObjects = songs.map(song => song.toObject()); // Convert Mongoose documents to plain objects
+    playlist.songs.push(...songObjects); // Add all songs to the playlist
     await user.save(); // Save the updated user document
 
-    res.status(200).json({ message: 'Song added to playlist successfully', playlist });
+    res.status(200).json({ message: 'Songs added to playlist successfully', playlist });
   } catch (err) {
-    console.error('Error adding song to playlist:', err);
+    console.error('Error adding songs to playlist:', err);
     res.status(500).json({
-      message: 'Error adding song to playlist',
+      message: 'Error adding songs to playlist',
       error: err.message || 'Unknown error',
     });
   }
