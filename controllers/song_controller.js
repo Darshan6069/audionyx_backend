@@ -1,6 +1,8 @@
 const os = require('os');
 const Song = require('../models/song.js');
 const admin = require('../middleware/firebase.js');
+const { getCurrentIpAddress } = require('../utils/network');
+
 
 class SongController {
   static async uploadSong(req, res) {
@@ -70,11 +72,8 @@ class SongController {
 
   static async getSongs(req, res) {
     try {
-      const networkInterfaces = os.networkInterfaces();
-      const ipAddress = Object.values(networkInterfaces)
-        .flat()
-        .find((iface) => iface.family === 'IPv4' && !iface.internal)?.address;
-
+      
+      const ipAddress = getCurrentIpAddress();
       const songs = await Song.find();
 
       const updatedSongs = songs.map((song) => ({
