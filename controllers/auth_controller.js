@@ -2,7 +2,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user_schema");
 const { OAuth2Client } = require('google-auth-library');
-const client = new OAuth2Client('YOUR_GOOGLE_CLIENT_ID'); 
+const client = new OAuth2Client('815538582382-4fkhe4kd3mk63k7oofs96pj75noaq2vt.apps.googleusercontent.com'); 
 
 exports.register = async (req, res) => {
   const { user_name, email, password } = req.body;
@@ -46,7 +46,6 @@ exports.register = async (req, res) => {
   }
 };
 
-
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -84,71 +83,54 @@ exports.login = async (req, res) => {
   }
 };
 
-
 exports.googleAuth = async (req, res) => {
   const { user_name, email, google_id_token, is_google_auth } = req.body;
 
-  console.log('Google auth request:', req.body);
-
-  // Validate input data
   if (!is_google_auth || !google_id_token || !email) {
     return res.status(400).json({ success: false, msg: 'Invalid Google auth request. Missing required fields.' });
-  }
-
-  // Validate email format (optional)
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({ success: false, msg: 'Invalid email format.' });
   }
 
   try {
     // Verify Google ID token
     const ticket = await client.verifyIdToken({
       idToken: google_id_token,
-      audience: 'YOUR_GOOGLE_CLIENT_ID', // Replace with your OAuth Client ID
+      audience: '815538582382-4fkhe4kd3mk63k7oofs96pj75noaq2vt.apps.googleusercontent.com', // Your OAuth Client ID
     });
 
     const payload = ticket.getPayload();
 
-    // Ensure the email from the token matches the provided email
     if (payload.email !== email) {
       return res.status(400).json({ success: false, msg: 'Email mismatch between token and provided email.' });
     }
 
-    // Check if user already exists
     let user = await User.findOne({ email });
-    if (user) {
-      console.log('Existing user found:', user);
-      return res.status(200).json({
-        success: true,
-        msg: 'User already registered.',
-        user: {
-          id: user._id,
-          user_name: user.user_name,
-          email: user.email,
-        },
+
+    // If user does not exist, create a new user
+    if (!user) {
+      user = new User({
+        user_name: user_name || payload.name,
+        email,
+        google_id: payload.sub,
       });
+      await user.save();
     }
 
-    // Create a new user if not found
-    user = new User({
-      user_name: user_name || payload.name,
-      email,
-      google_id: payload.sub, // Google user ID (unique identifier)
-    });
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      "your_jwt_secret",
+      { expiresIn: "2d" }
+    );
 
-    console.log('Saving user:', user);
-    await user.save();
-    console.log('User saved to MongoDB');
-
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
-      msg: 'User registered successfully.',
+      msg: user.wasNew ? 'User registered successfully.' : 'User logged in.',
       user: {
         id: user._id,
         user_name: user.user_name,
         email: user.email,
       },
+      token,
     });
 
   } catch (error) {

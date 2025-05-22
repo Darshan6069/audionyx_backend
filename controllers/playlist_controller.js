@@ -1,7 +1,7 @@
 // controllers/playlist_controller.js
 const User = require('../models/user_schema');
 const Song  = require('../models/song'); // Import the Song model
-
+const { getCurrentIpAddress } = require('../utils/network');
 
 
 exports.createPlaylist = async (req, res) => {
@@ -151,8 +151,10 @@ exports.removeSongFromPlaylist = async (req, res) => {
 
 exports.getSongsFromPlaylist = async (req, res) => {
   try {
-    const { playlistId } = req.params; // Get playlist ID from request parameters
-    const userId = req.user.userId; // Get user ID from the authenticated user
+    const { playlistId } = req.params;
+    const userId = req.user.userId;
+    const ipAddress = getCurrentIpAddress();
+
 
     // Find the user
     const user = await User.findById(userId);
@@ -167,9 +169,23 @@ exports.getSongsFromPlaylist = async (req, res) => {
     }
 
     // Populate the songs array with full song details
-    const populatedSongs = await Song.find({ _id: { $in: playlist.songs } });
+    const songs = await Song.find({ _id: { $in: playlist.songs.map(s => s._id || s) } });
 
-    res.status(200).json({ songs: populatedSongs });
+    // Update URLs to use current IP
+    const updatedSongs = songs.map((song) => ({
+      ...song._doc,
+      mp3Url: song.mp3Url
+        ? song.mp3Url.replace(/http:\/\/.*?:4000/, `http://${ipAddress}:4000`)
+        : "",
+      thumbnailUrl: song.thumbnailUrl
+        ? song.thumbnailUrl.replace(/http:\/\/.*?:4000/, `http://${ipAddress}:4000`)
+        : "",
+      subtitleUrl: song.subtitleUrl
+        ? song.subtitleUrl.replace(/http:\/\/.*?:4000/, `http://${ipAddress}:4000`)
+        : "",
+    }));
+
+    res.status(200).json({ songs: updatedSongs });
   } catch (err) {
     console.error('Error fetching songs from playlist:', err);
     res.status(500).json({

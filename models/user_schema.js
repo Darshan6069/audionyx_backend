@@ -4,7 +4,8 @@ const PlaylistSchema = require('./playlist').schema; // Import the Playlist sche
 const userSchema = new mongoose.Schema({
   user_name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+ password: { type: String }, 
+  google_id: { type: String, unique: true }, 
   playlists: [
     new mongoose.Schema({
       name: { type: String, required: true },
