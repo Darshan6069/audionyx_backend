@@ -11,7 +11,6 @@ router.post('/remove-song', verifyToken, PlaylistController.removeSongFromPlayli
 router.delete('/users/:userId/playlists/:playlistId', verifyToken, PlaylistController.deletePlaylist);
 router.get('/:playlistId', verifyToken, PlaylistController.getSongsFromPlaylist);
 
-
-
+    
 
 module.exports = router;

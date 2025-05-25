@@ -8,12 +8,9 @@ const port = process.env.PORT || 4000;
 const songRoutes = require('./routes/song_routes');
 const playlistRoutes = require('./routes/playlist_routes');
 const authRoutes = require("./routes/auth_routes");
+const { getCurrentIpAddress } = require('./utils/network');
+const ipAddress = getCurrentIpAddress();
 
-// Get the local IP address dynamically
-const networkInterfaces = os.networkInterfaces();
-const ipAddress = Object.values(networkInterfaces)
-  .flat()
-  .find((iface) => iface.family === 'IPv4' && !iface.internal)?.address;
 
 app.use(cors());
 app.use(bodyParser.json());
